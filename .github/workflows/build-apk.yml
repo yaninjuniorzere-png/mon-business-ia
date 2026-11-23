@@ -1,54 +1,45 @@
 
-name: Construire APK Android
+name: Construire APK
 
 on:
-  workflow_dispatch:
   push:
-    paths:
-      - '*.zip'
-      - '.github/workflows/**'
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  construire:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Recuperer le code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Installer Java
-        uses: actions/setup-java@v4
+      - name: Dézipper le projet
+        run: |
+          ls -la
+          unzip -o mon_business_ia_pour_compilation_depuis_telephone.zip
+          echo "--- après dézip ---"
+          ls -la
+          # Trouver où est le pubspec.yaml
+          PROJET=$(find . -maxdepth 3 -name "pubspec.yaml" | head -n 1 | xargs dirname)
+          echo "PROJET=$PROJET" >> $GITHUB_ENV
+          echo "Projet trouvé dans : $PROJET"
+          ls -la "$PROJET"
+
+      - uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Installer Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: 'stable'
 
-      - name: Preparer le projet
+      - name: Construire l'APK
         run: |
-          flutter create --org com.monbusinessia mon_business_ia
-          mkdir source
-          ZIP_FILE=$(find . -maxdepth 1 -name '*.zip' | head -n 1)
-          test -n "$ZIP_FILE"
-          unzip -o "$ZIP_FILE" -d source
-          MAIN=$(find source -name main.dart | head -n 1)
-          PUBSPEC=$(find source -name pubspec.yaml | head -n 1)
-          test -n "$MAIN"
-          test -n "$PUBSPEC"
-          cp "$MAIN" mon_business_ia/lib/main.dart
-          cp "$PUBSPEC" mon_business_ia/pubspec.yaml
-
-      - name: Compiler APK
-        run: |
-          cd mon_business_ia
+          cd "$PROJET"
           flutter pub get
           flutter build apk --release
 
-      - name: Publier APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: Mon-Business-IA-APK
-          path: mon_business_ia/build/app/outputs/flutter-apk/app-release.apk
+          name: mon-business-ia-apk
+          path: ${{ env.PROJET }}/build/app/outputs/flutter-apk/app-release.apk
