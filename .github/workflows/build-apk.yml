@@ -1,50 +1,24 @@
 
-name: Construire APK
-
+name: Build APK
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
-
 jobs:
-  construire:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Dézipper le projet
-        run: |
-          ls -la
-          unzip -o mon_business_ia_pour_compilation_depuis_telephone.zip
-          echo "--- après dézip ---"
-          ls -la
-          # Trouver où est le pubspec.yaml
-          PROJET=$(find . -maxdepth 3 -name "pubspec.yaml" | head -n 1 | xargs dirname)
-          echo "PROJET=$PROJET" >> $GITHUB_ENV
-          echo "Projet trouvé dans : $PROJET"
-          ls -la "$PROJET"
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.0'
           channel: 'stable'
-
-      - name: Construire l'APK
+      - name: Creer projet si manquant
         run: |
-          cd "$PROJET"
-          flutter pub get
-          if [ ! -f android/app/build.gradle ]; then
-            echo "Fichier build.gradle manquant, je le recrée"
-            flutter create . --org com.monbusinessia --project-name mon_business_ia_mvp
-            flutter pub get
+          if [ ! -f "pubspec.yaml" ]; then
+            flutter create --project-name mon_assistant_ia --org com.example .
           fi
-          flutter build apk --release
-
+      - name: Build APK
+        run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
-          name: mon-business-ia-apk
-          path: ${{ env.PROJET }}/build/app/outputs/flutter-apk/app-release.apk
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
